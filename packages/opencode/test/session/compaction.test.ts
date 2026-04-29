@@ -26,6 +26,7 @@ import { Snapshot } from "../../src/snapshot"
 import { ProviderTest } from "../fake/provider"
 import { testEffect } from "../lib/effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { ToolRegistry } from "../../src/tool/registry"
 
 void Log.init({ print: false })
 
@@ -226,7 +227,8 @@ function runtime(
       Layer.provide(SessionNs.defaultLayer),
       Layer.provide(layer(result)),
       Layer.provide(Agent.defaultLayer),
-      Layer.provide(plugin),
+      Layer.provide(Plugin.defaultLayer),
+      Layer.provide(ToolRegistry.defaultLayer),
       Layer.provide(bus),
       Layer.provide(config),
     ),
@@ -238,6 +240,7 @@ const deps = Layer.mergeAll(
   layer("continue"),
   Agent.defaultLayer,
   Plugin.defaultLayer,
+  ToolRegistry.defaultLayer,
   Bus.layer,
   Config.defaultLayer,
 )
@@ -285,6 +288,7 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, provider = ProviderTest.fa
       Layer.provide(Permission.defaultLayer),
       Layer.provide(Agent.defaultLayer),
       Layer.provide(Plugin.defaultLayer),
+      Layer.provide(ToolRegistry.defaultLayer),
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(config),
