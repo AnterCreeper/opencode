@@ -227,7 +227,7 @@ function runtime(
       Layer.provide(SessionNs.defaultLayer),
       Layer.provide(layer(result)),
       Layer.provide(Agent.defaultLayer),
-      Layer.provide(Plugin.defaultLayer),
+      Layer.provide(plugin),
       Layer.provide(ToolRegistry.defaultLayer),
       Layer.provide(bus),
       Layer.provide(config),
