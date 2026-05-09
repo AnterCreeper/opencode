@@ -302,6 +302,16 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
   return msgs
 }
 
+// Industry-standard image formats universally supported by major LLM APIs
+// Used as a safe default when no per-provider whitelist is configured
+const DEFAULT_IMAGE_WHITELIST = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/bmp",
+]
+
 function unsupportedParts(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
   return msgs.map((msg) => {
     if (msg.role !== "user" || !Array.isArray(msg.content)) return msg
@@ -326,8 +336,26 @@ function unsupportedParts(msgs: ModelMessage[], model: Provider.Model): ModelMes
       const mime = part.type === "image" ? String(part.image).split(";")[0].replace("data:", "") : part.mediaType
       const filename = part.type === "file" ? part.filename : undefined
       const modality = mimeToModality(mime)
-      if (!modality) return part
-      if (model.capabilities.input[modality]) return part
+      if (!modality) {
+        const name = filename ? `"${filename}"` : "this file"
+        return {
+          type: "text" as const,
+          text: `ERROR: Cannot read ${name} (unsupported file format: ${mime}). Inform the user.`,
+        }
+      }
+      if (model.capabilities.input[modality]) {
+        // Determine effective whitelist: user config > safe default for images > no restriction
+        const userWhitelist = model.attachments?.whitelist
+        const effectiveWhitelist = userWhitelist ?? (modality === "image" ? DEFAULT_IMAGE_WHITELIST : undefined)
+        if (effectiveWhitelist && !effectiveWhitelist.includes(mime)) {
+          const name = filename ? `"${filename}"` : "this file"
+          return {
+            type: "text" as const,
+            text: `ERROR: Cannot read ${name} (unsupported file format: ${mime}). Inform the user.`,
+          }
+        }
+        return part
+      }
 
       const name = filename ? `"${filename}"` : modality
       return {

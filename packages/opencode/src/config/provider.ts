@@ -55,6 +55,13 @@ export const Model = Schema.Struct({
   ),
   options: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
   headers: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+  attachments: Schema.optional(
+    Schema.Struct({
+      whitelist: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description: "Only allow these MIME types as attachments. If set, all other formats are rejected.",
+      }),
+    }),
+  ),
   variants: Schema.optional(
     Schema.Record(
       Schema.String,
@@ -76,6 +83,13 @@ export const Info = Schema.Struct({
   npm: Schema.optional(Schema.String),
   whitelist: Schema.optional(Schema.mutable(Schema.Array(Schema.String))),
   blacklist: Schema.optional(Schema.mutable(Schema.Array(Schema.String))),
+  attachments: Schema.optional(
+    Schema.Struct({
+      whitelist: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description: "Only allow these MIME types as attachments. If set, all other formats are rejected.",
+      }),
+    }),
+  ),
   options: Schema.optional(
     Schema.StructWithRest(
       Schema.Struct({
