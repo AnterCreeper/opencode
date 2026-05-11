@@ -201,6 +201,8 @@ Plugins can subscribe to events as seen below in the Examples section. Here is a
 - `tool.execute.after`
 - `tool.execute.before`
 
+`tool.execute.after` runs for both successful and failed tool execution so plugins can finalize AI-visible output and hide execution-layer details such as sandbox paths. Its `input.args` value contains the original logical tool arguments, not plugin-rewritten execution arguments.
+
 #### TUI Events
 
 - `tui.prompt.append`

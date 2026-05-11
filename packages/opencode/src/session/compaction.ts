@@ -21,6 +21,8 @@ import { fn } from "@/util/fn"
 import { ToolRegistry } from "@/tool/registry"
 import { tool as aiTool, jsonSchema } from "ai"
 import type { Tool as AITool } from "ai"
+import * as EffectZod from "@/util/effect-zod"
+import { ProviderTransform } from "@/provider/transform"
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -454,9 +456,13 @@ export const layer: Layer.Layer<
         })
 
         for (const def of toolDefs) {
+          const rawSchema = EffectZod.toJsonSchema(def.parameters) as any
+          const schema = model.api?.id
+            ? ProviderTransform.schema(model, rawSchema)
+            : rawSchema
           tools[def.id] = aiTool({
             description: def.description,
-            inputSchema: jsonSchema(def.parameters as any),
+            inputSchema: jsonSchema(schema),
             execute(args, options) {
               return Effect.runPromise(
                 Effect.gen(function* () {

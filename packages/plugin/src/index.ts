@@ -270,6 +270,12 @@ export interface Hooks {
     input: { cwd: string; sessionID?: string; callID?: string },
     output: { env: Record<string, string> },
   ) => Promise<void>
+  /**
+   * Runs after tool execution to finalize AI-visible tool output. This hook is
+   * called for both successful tool results and failed tool execution so
+   * plugins can hide execution-layer details, such as sandbox paths, from the
+   * transcript. `input.args` contains the original logical tool arguments.
+   */
   "tool.execute.after"?: (
     input: { tool: string; sessionID: string; callID: string; args: any },
     output: {

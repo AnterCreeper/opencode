@@ -288,13 +288,14 @@ export const layer: Layer.Layer<
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
             }
+            const cleanInput = structuredClone(value.input)
             yield* updateToolCall(value.toolCallId, (match) => ({
               ...match,
               tool: value.toolName,
               state: {
                 ...match.state,
                 status: "running",
-                input: value.input,
+                input: cleanInput,
                 time: { start: Date.now() },
               },
               metadata: match.metadata?.providerExecuted

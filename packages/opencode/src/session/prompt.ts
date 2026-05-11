@@ -370,24 +370,26 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const run = yield* runner()
       const promptOps = yield* ops()
 
-      const context = (args: any, options: ToolExecutionOptions): Tool.Context => ({
-        sessionID: input.session.id,
-        abort: options.abortSignal!,
-        messageID: input.processor.message.id,
-        callID: options.toolCallId,
-        extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps },
-        agent: input.agent.name,
-        messages: input.messages,
-        metadata: (val) =>
-          input.processor.updateToolCall(options.toolCallId, (match) => {
-            if (!["running", "pending"].includes(match.state.status)) return match
-            return {
-              ...match,
-              state: {
-                title: val.title,
-                metadata: val.metadata,
-                status: "running",
-                input: args,
+      const context = (args: any, options: ToolExecutionOptions): Tool.Context => {
+        const originalArgs = { ...args }
+        return {
+          sessionID: input.session.id,
+          abort: options.abortSignal!,
+          messageID: input.processor.message.id,
+          callID: options.toolCallId,
+          extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps },
+          agent: input.agent.name,
+          messages: input.messages,
+          metadata: (val) =>
+            input.processor.updateToolCall(options.toolCallId, (match) => {
+              if (!["running", "pending"].includes(match.state.status)) return match
+              return {
+                ...match,
+                state: {
+                  title: val.title,
+                  metadata: val.metadata,
+                  status: "running",
+                  input: originalArgs,
                 time: { start: Date.now() },
               },
             }
@@ -401,7 +403,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               ruleset: Permission.merge(input.agent.permission, input.session.permission ?? []),
             })
             .pipe(Effect.orDie),
-      })
+      }
+    }
 
       for (const item of yield* registry.tools({
         modelID: ModelID.make(input.model.api.id),
@@ -413,15 +416,29 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           description: item.description,
           inputSchema: jsonSchema(schema),
           execute(args, options) {
+            const sandboxArgs = { ...args }
             return run.promise(
               Effect.gen(function* () {
                 const ctx = context(args, options)
                 yield* plugin.trigger(
                   "tool.execute.before",
                   { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
-                  { args },
+                  { args: sandboxArgs },
                 )
-                const result = yield* item.execute(args, ctx)
+                const result = yield* item.execute(sandboxArgs, ctx).pipe(
+                  Effect.catchCause((cause) =>
+                    Effect.gen(function* () {
+                      const error = Cause.squash(cause)
+                      const errorOutput = { title: "", output: error instanceof Error ? error.message : String(error), metadata: {} }
+                      yield* plugin.trigger(
+                        "tool.execute.after",
+                        { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
+                        errorOutput,
+                      )
+                      return yield* Effect.fail(new Error(errorOutput.output, { cause: error }))
+                    }),
+                  ),
+                )
                 const output = {
                   ...result,
                   attachments: result.attachments?.map((attachment) => ({
